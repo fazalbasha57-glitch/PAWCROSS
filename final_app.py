@@ -1,0 +1,135 @@
+import streamlit as st
+import pandas as pd
+import plotly.express as px
+from datetime import datetime
+import time
+
+# --- 1. CONFIGURATION ---
+# Replace the string below with your actual Google Sheet ID from your URL
+SHEET_ID = "1cwPIsNP-_c5YN5E36tLzSOEPUPPOGcQ6jXA5CThxl4c"
+SHEET_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv"
+
+st.set_page_config(page_title="PAW CROSS | Wildlife Safety", layout="wide", page_icon="🐾")
+
+# --- 2. SIDEBAR NAVIGATION ---
+st.sidebar.title("🐾 PAW CROSS Menu")
+page = st.sidebar.radio("Navigate to:", ["Home", "Live Dashboard", "Project Details"])
+
+# --- 3. PAGE 1: HOME ---
+if page == "Home":
+    col1, col2 = st.columns([1.2, 1])
+
+    with col1:
+        st.title("Welcome to PAW CROSS")
+        st.subheader("The Digital Guardian for Wildlife Safety")
+        st.write("""
+            Forest roads are shared spaces. PAW CROSS uses IoT and thermal sensing 
+            to detect animal presence and alert drivers instantly, reducing 
+            accidents and protecting biodiversity.
+        """)
+        st.info("👈 Use the sidebar to monitor live detections.")
+
+    with col2:
+        # Cinematic 16:9 Image
+        st.image("https://images.unsplash.com/photo-1484406566174-9da000fda645?auto=format&fit=crop&q=80&w=1200&h=675", 
+                 caption="Bridging Technology and Nature", use_container_width=True)
+
+    st.markdown("---")
+    
+    st.subheader("🚀 System Quick Look")
+    s1, s2, s3 = st.columns(3)
+    s1.success("🛰️ Cloud: Connected")
+    s2.info("🔋 Hardware: Active")
+    s3.warning("📡 Sensor: Monitoring")
+
+    st.markdown("---")
+    
+    st.subheader("🛠️ Technology Stack")
+    t1, t2 = st.columns(2)
+    with t1:
+        st.markdown("""
+        - **Microcontroller:** Arduino with ESP8266 Wi-Fi
+        - **Sensing:** PIR Thermal Motion Sensors
+        - **Database:** Google Sheets (Cloud Storage)
+        """)
+    with t2:
+        st.markdown("""
+        - **Frontend:** Streamlit Web Framework (Python)
+        - **Analytics:** Plotly Real-time Graphing
+        - **Bridge:** Python Serial-to-HTTPS
+        """)
+
+# --- 4. PAGE 2: DASHBOARD (Updated with Notifications & Sound) ---
+elif page == "Live Dashboard":
+    st.title("🐾 Real-Time Monitoring Dashboard")
+    
+    try:
+        # Load Data
+        df = pd.read_csv(SHEET_URL)
+        df['Timestamp'] = pd.to_datetime(df['Timestamp'], dayfirst=True, errors='coerce')
+        
+        # Live Alert Notification
+        if not df.empty:
+            last_entry = df.iloc[-1]
+            # Calculate how many seconds ago the detection happened
+            time_diff = (datetime.now() - last_entry['Timestamp']).total_seconds()
+            
+            # TRIGGER ALERT: If detection was within the last 30 seconds
+            if time_diff < 30:
+                # 1. The Red Alert Banner
+                st.error(f"🚨 ALERT: ANIMAL DETECTED! (Last seen: {last_entry['Timestamp'].strftime('%H:%M:%S')})")
+                
+                # 2. THE POP NOTIFICATION
+                st.toast("🐾 PAW DETECTED!", icon='⚠️')
+                
+                # 3. THE BEEP SOUND (JavaScript method to ensure it plays)
+                st.components.v1.html(
+                    """
+                    <script>
+                    var audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
+                    audio.play().catch(function(error) {
+                        console.log("Autoplay blocked. Click the page to enable sound.");
+                    });
+                    </script>
+                    """,
+                    height=0,
+                )
+        
+        # Metrics & Visuals
+        m1, m2, m3 = st.columns(3)
+        m1.metric("Total Detections", len(df))
+        m2.metric("Last Activity", last_entry['Timestamp'].strftime('%H:%M') if not df.empty else "N/A")
+        m3.metric("System Status", "LIVE")
+
+        chart_col, table_col = st.columns([2, 1])
+        with chart_col:
+            fig = px.area(df, x='Timestamp', y=df.index, title="Detection History", color_discrete_sequence=['#2E7D32'])
+            st.plotly_chart(fig, use_container_width=True)
+        
+        with table_col:
+            st.write("Recent Activity Log")
+            st.dataframe(df.tail(10), use_container_width=True)
+
+        # Auto-Refresh logic: waits 5 seconds then reloads the page
+        time.sleep(5)
+        st.rerun()
+
+    except Exception as e:
+        st.warning("Connecting to Cloud Database... Wave sensor to start data flow.")
+
+# --- 5. PAGE 3: PROJECT DETAILS ---
+elif page == "Project Details":
+    st.title("About PAW CROSS")
+    st.markdown("""
+    ### Project Objective
+    The primary goal is to create an affordable, scalable IoT solution for forest-bordering roads. 
+    By using thermal detection instead of cameras, we protect animal privacy and keep costs low 
+    while maintaining 24/7 surveillance.
+
+    ### How it Works
+    1. **Sensing:** PIR sensors detect heat signatures of moving animals.
+    2. **Processing:** Arduino processes the signal and sends it via Wi-Fi.
+    3. **Cloud:** Data is logged into a Google Sheet for analysis.
+    4. **Alert:** The Web App and roadside LEDs notify stakeholders immediately.
+    """)
+    st.info("Developed as a Final Year BCA Project.")
