@@ -5,7 +5,6 @@ from datetime import datetime
 import time
 
 # --- 1. CONFIGURATION ---
-# Replace the string below with your actual Google Sheet ID from your URL
 SHEET_ID = "1cwPIsNP-_c5YN5E36tLzSOEPUPPOGcQ6jXA5CThxl4c"
 SHEET_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv"
 
@@ -30,7 +29,6 @@ if page == "Home":
         st.info("👈 Use the sidebar to monitor live detections.")
 
     with col2:
-        # Cinematic 16:9 Image
         st.image("https://images.unsplash.com/photo-1484406566174-9da000fda645?auto=format&fit=crop&q=80&w=1200&h=675", 
                  caption="Bridging Technology and Nature", use_container_width=True)
 
@@ -59,7 +57,7 @@ if page == "Home":
         - **Bridge:** Python Serial-to-HTTPS
         """)
 
-# --- 4. PAGE 2: DASHBOARD (Updated with Notifications & Sound) ---
+# --- 4. PAGE 2: DASHBOARD ---
 elif page == "Live Dashboard":
     st.title("🐾 Real-Time Monitoring Dashboard")
     
@@ -68,32 +66,26 @@ elif page == "Live Dashboard":
         df = pd.read_csv(SHEET_URL)
         df['Timestamp'] = pd.to_datetime(df['Timestamp'], dayfirst=True, errors='coerce')
         
-        # Live Alert Notification
+        # --- UPDATE: ALERT LOGIC WITH TIME-WINDOW VALIDATION ---
         if not df.empty:
+            # 1. Get the most recent entry
             last_entry = df.iloc[-1]
-            # Calculate how many seconds ago the detection happened
-            time_diff = (datetime.now() - last_entry['Timestamp']).total_seconds()
             
-            # TRIGGER ALERT: If detection was within the last 30 seconds
-            if time_diff < 30:
-                # 1. The Red Alert Banner
-                st.error(f"🚨 ALERT: ANIMAL DETECTED! (Last seen: {last_entry['Timestamp'].strftime('%H:%M:%S')})")
-                
-                # 2. THE POP NOTIFICATION
+            # 2. Calculate how long ago it happened
+            time_diff = (datetime.now() - last_entry['Timestamp']).total_seconds()
+
+            # 3. ONLY trigger alert if it happened within the last 30 seconds
+            if time_diff < 30: 
+                st.error(f"🚨 LIVE ALERT: MOTION DETECTED ({last_entry['Timestamp'].strftime('%H:%M:%S')})")
                 st.toast("🐾 PAW DETECTED!", icon='⚠️')
                 
-                # 3. THE BEEP SOUND (JavaScript method to ensure it plays)
+                # Play Sound
                 st.components.v1.html(
-                    """
-                    <script>
-                    var audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
-                    audio.play().catch(function(error) {
-                        console.log("Autoplay blocked. Click the page to enable sound.");
-                    });
-                    </script>
-                    """,
-                    height=0,
+                    """<script>new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg').play();</script>""", 
+                    height=0
                 )
+            else:
+                st.success("✅ System Clear: No recent motion detected.")
         
         # Metrics & Visuals
         m1, m2, m3 = st.columns(3)
@@ -110,26 +102,47 @@ elif page == "Live Dashboard":
             st.write("Recent Activity Log")
             st.dataframe(df.tail(10), use_container_width=True)
 
-        # Auto-Refresh logic: waits 5 seconds then reloads the page
+        # Auto-Refresh logic
         time.sleep(5)
         st.rerun()
 
     except Exception as e:
         st.warning("Connecting to Cloud Database... Wave sensor to start data flow.")
 
-# --- 5. PAGE 3: PROJECT DETAILS ---
+# --- 5. PAGE: PROJECT DETAILS ---
 elif page == "Project Details":
-    st.title("About PAW CROSS")
-    st.markdown("""
-    ### Project Objective
-    The primary goal is to create an affordable, scalable IoT solution for forest-bordering roads. 
-    By using thermal detection instead of cameras, we protect animal privacy and keep costs low 
-    while maintaining 24/7 surveillance.
+    st.title("🐾 About PAW CROSS")
 
-    ### How it Works
-    1. **Sensing:** PIR sensors detect heat signatures of moving animals.
-    2. **Processing:** Arduino processes the signal and sends it via Wi-Fi.
-    3. **Cloud:** Data is logged into a Google Sheet for analysis.
-    4. **Alert:** The Web App and roadside LEDs notify stakeholders immediately.
-    """)
-    st.info("Developed as a Final Year BCA Project.")
+    st.markdown("### 🌐 Global Access")
+    c1, c2 = st.columns(2)
+    with c1:
+        st.info("🔗 **Live Dashboard:** [paw-cross.streamlit.app](https://pawcross-wcoggwmycm8niw2lyk35hm.streamlit.app)")
+    with c2:
+        st.success("💻 **Source Code:** [GitHub Repository](https://github.com/fazalbasha57-glitch/PAWCROSS/tree/main)")
+
+    st.markdown("---")
+
+    col_info, col_img = st.columns([1.5, 1])
+    
+    with col_info:
+        st.markdown("""
+        ### 🎯 Project Objective
+        The primary goal is to create an affordable, scalable IoT solution for forest-bordering roads. 
+        By using **thermal detection** instead of standard cameras for motion triggering, we:
+        - Protect animal privacy.
+        - Reduce data costs and power consumption.
+        - Maintain 24/7 surveillance in complete darkness.
+
+        ### ⚙️ How it Works
+        1. **Sensing:** PIR sensors detect infrared heat signatures from wildlife.
+        2. **Processing:** Arduino/ESP32 processes the signal and bridges it to the web.
+        3. **Cloud Logging:** Data is securely logged into a Google Sheet for analysis.
+        4. **Real-time Alert:** This Web App and roadside LEDs notify drivers and rangers.
+        """)
+    
+    with col_img:
+        st.image("https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&q=80&w=800", 
+                 caption="IoT Architecture for Wildlife Safety", use_container_width=True)
+
+    st.markdown("---")
+    st.info("🎓 **Final Year BCA Project** | Focus: Smart Cities & Wildlife Conservation")
