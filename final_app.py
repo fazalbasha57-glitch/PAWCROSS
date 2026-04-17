@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 import time
 
 # --- 1. CONFIGURATION ---
@@ -72,10 +72,15 @@ elif page == "Live Dashboard":
             last_entry = df.iloc[-1]
             
             # 2. Calculate how long ago it happened
-            time_diff = (datetime.now() - last_entry['Timestamp']).total_seconds()
+            # Get current time in UTC, then convert to IST (+05:30) to match Google Sheets
+            current_utc = datetime.now(timezone.utc)
+            current_ist_naive = (current_utc + timedelta(hours=5, minutes=30)).replace(tzinfo=None)
+            
+            time_diff = (current_ist_naive - last_entry['Timestamp']).total_seconds()
 
             # 3. ONLY trigger alert if it happened within the last 30 seconds
-            if time_diff < 30: 
+            # Ensure time_diff is positive (to handle potential slight future time discrepancies)
+            if 0 <= time_diff < 30: 
                 st.error(f"🚨 LIVE ALERT: MOTION DETECTED ({last_entry['Timestamp'].strftime('%H:%M:%S')})")
                 st.toast("🐾 PAW DETECTED!", icon='⚠️')
                 
